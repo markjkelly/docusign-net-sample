@@ -7,3 +7,4 @@ The code from the original walkthrough has been modified:
 - JSON Request Format
 - PONOs to construct DocuSign request body
 
+In order to use this sample code, signup for a free DocuSign Developer account [here](https://secure.docusign.com/signup/developer) and add your credentials to the RequestSignatureOnDocument.cs class.
