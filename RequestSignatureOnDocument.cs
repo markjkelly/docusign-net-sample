@@ -23,7 +23,6 @@ namespace DocuSignAPIWalkthrough04
             string documentName = "Try DocuSigning.docx";			// copy document with same name and extension into project directory (i.e. "test.pdf")
             string contentType = "application/pdf";		// default content type is PDF
 
-
             string baseURL = "https://demo.docusign.net/restapi/v2/accounts/"; //Add your DocuSign account number to the end of the url
 
             //---------------------------------------------------------------------------------------------------
