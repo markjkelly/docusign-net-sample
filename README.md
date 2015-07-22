@@ -6,5 +6,6 @@ The code from the original walkthrough has been modified:
 - Anchor Text used for positioning of DocuSign tabs 
 - JSON Request Format
 - PONOs to construct DocuSign request body
+- [Json.NET](https://github.com/JamesNK/Newtonsoft.Json) Package to serialize the PONOs and deserialize the response into PONOs. 
 
 In order to use this sample code, signup for a free DocuSign Developer account [here](https://secure.docusign.com/signup/developer) and add your credentials to the RequestSignatureOnDocument.cs class.
