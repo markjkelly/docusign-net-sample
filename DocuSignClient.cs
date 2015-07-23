@@ -27,10 +27,15 @@ namespace DocuSignSample
         {
             Trace.WriteLine("Entering DocuSignClient.CreateAndSendEnvelope()");
             string url = docusignCredentials.baseUrl + "restapi/v2/accounts/" + docusignCredentials.accountId + "/envelopes";
-            Trace.WriteLine("url: " + url);
             string requestBody = JsonConvert.SerializeObject(envelope);
 
-            HttpWebRequest request = initializeRequest(url, "POST", requestBody, "application/json", docusignCredentials.username, docusignCredentials.password, docusignCredentials.integratorKey);
+            // set request url, method, headers.  Don't set the body yet, we'll set that seperately after
+            // we read the document bytes and configure the rest of the multipart/form-data request
+            HttpWebRequest request = initializeRequest(url, "POST", null, "application/json", docusignCredentials.username, docusignCredentials.password, docusignCredentials.integratorKey);
+
+            // some extra config for this api call
+            configureMultiPartFormDataRequest(request, requestBody, "Try DocuSigning.docx", "application/pdf");
+
             CreateEnvelopeResponse createEnvelopeResponse = JsonConvert.DeserializeObject<CreateEnvelopeResponse>(getResponseBody(request));
 
             Trace.WriteLine("DocuSign Response: [" + JsonConvert.SerializeObject(createEnvelopeResponse) + "]");
@@ -131,6 +136,62 @@ namespace DocuSignSample
             StreamReader sr = new StreamReader(webResponse.GetResponseStream());
             string responseText = sr.ReadToEnd();
             return responseText;
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static void configureMultiPartFormDataRequest(HttpWebRequest request, string xmlBody, string docName, string contentType)
+        {
+            /*
+            This is the only DocuSign API call that requires a "multipart/form-data" content type.  We will be 
+            constructing a request body in the following format (each newline is a CRLF):
+
+            --AAA
+            Content-Type: application/json
+            Content-Disposition: form-data
+
+            <REQUEST BODY GOES HERE>
+            --AAA
+            Content-Type:application/pdf
+            Content-Disposition: file; filename="document.pdf"; documentid=1 
+
+            <DOCUMENT BYTES GO HERE>
+            --AAA--
+            */
+
+            // overwrite the default content-type header and set a boundary marker
+            request.ContentType = "multipart/form-data; boundary=BOUNDARY";
+
+            // start building the multipart request body
+            string requestBodyStart = "\r\n\r\n--BOUNDARY\r\n" +
+                "Content-Type: application/json\r\n" +
+                    "Content-Disposition: form-data\r\n" +
+                    "\r\n" +
+                    xmlBody + "\r\n\r\n--BOUNDARY\r\n" + 	// our xml formatted envelopeDefinition
+                    "Content-Type: " + contentType + "\r\n" +
+                    "Content-Disposition: file; filename=\"" + docName + "\"; documentId=1\r\n" +
+                    "\r\n";
+            string requestBodyEnd = "\r\n--BOUNDARY--\r\n\r\n";
+
+            Trace.WriteLine("File.Exists? " + docName + " [" + File.Exists(docName) + "]");
+            // read contents of provided document into the request stream
+            FileStream fileStream = File.OpenRead(docName);
+
+
+            // write the body of the request
+            byte[] bodyStart = System.Text.Encoding.UTF8.GetBytes(requestBodyStart.ToString());
+            byte[] bodyEnd = System.Text.Encoding.UTF8.GetBytes(requestBodyEnd.ToString());
+            Stream dataStream = request.GetRequestStream();
+            dataStream.Write(bodyStart, 0, requestBodyStart.ToString().Length);
+
+            // Read the file contents and write them to the request stream.  We read in blocks of 4096 bytes
+            byte[] buf = new byte[4096];
+            int len;
+            while ((len = fileStream.Read(buf, 0, 4096)) > 0)
+            {
+                dataStream.Write(buf, 0, len);
+            }
+            dataStream.Write(bodyEnd, 0, requestBodyEnd.ToString().Length);
+            dataStream.Close();
         }
     }
 }
